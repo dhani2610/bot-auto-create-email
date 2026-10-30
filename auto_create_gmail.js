@@ -492,28 +492,58 @@ function startAutomation(config) {
         // STEP 5: HALAMAN "PARENT SIGN-IN" (INPUT EMAIL & PASSWORD ORANG TUA)
         // ======================================================================
         setStep("STEP 5", "Parent Sign-In: Mengisi email orang tua (" + config.parentEmail + ")");
-        if (waitForTextOrDesc(["Parent sign-in", "Login orang tua", "Parent email", "Email orang tua"], 10000)) {
-            var parentEmailInput = className("android.widget.EditText").findOne(4000);
-            if (parentEmailInput) {
-                parentEmailInput.setText(config.parentEmail);
-                sleep(1000);
-                clickNextButton();
-                sleep(3500);
+        waitForTextOrDesc(["Parent sign-in", "Login orang tua", "Parent email", "Email orang tua", "Sign in", "Login"], 10000);
+
+        var parentEmailInput = null;
+        for (var we = 0; we < 8; we++) {
+            var rawEmails = className("android.widget.EditText").find();
+            for (var re = 0; re < rawEmails.length; re++) {
+                var reId = rawEmails[re].id() || "";
+                if (reId.indexOf("urlbar") == -1 && reId.indexOf("search") == -1) {
+                    parentEmailInput = rawEmails[re];
+                    break;
+                }
             }
+            if (parentEmailInput) break;
+            sleep(1000);
+        }
+
+        if (parentEmailInput) {
+            parentEmailInput.click();
+            sleep(400);
+            parentEmailInput.setText(config.parentEmail);
+            sleep(1000);
+            clickNextButton();
+            sleep(3500);
         } else {
             throw new Error("Layar Parent Sign-In tidak muncul.");
         }
 
         // Input Sandi Orang Tua
         setStep("STEP 5.1", "Parent Sign-In: Mengisi password akun orang tua");
-        if (waitForTextOrDesc(["Enter your password", "Masukkan sandi Anda", "Sandi"], 9000)) {
-            var parentPwInput = className("android.widget.EditText").password(true).findOne(3000) || className("android.widget.EditText").findOne(3000);
-            if (parentPwInput) {
-                parentPwInput.setText(config.parentPw);
-                sleep(1000);
-                clickNextButton();
-                sleep(4000);
+        waitForTextOrDesc(["Enter your password", "Masukkan sandi Anda", "Sandi", "Password"], 10000);
+
+        var parentPwInput = null;
+        for (var wpw = 0; wpw < 8; wpw++) {
+            var rawPws = className("android.widget.EditText").find();
+            for (var rp = 0; rp < rawPws.length; rp++) {
+                var rpId = rawPws[rp].id() || "";
+                if (rpId.indexOf("urlbar") == -1 && rpId.indexOf("search") == -1) {
+                    parentPwInput = rawPws[rp];
+                    break;
+                }
             }
+            if (parentPwInput) break;
+            sleep(1000);
+        }
+
+        if (parentPwInput) {
+            parentPwInput.click();
+            sleep(400);
+            parentPwInput.setText(config.parentPw);
+            sleep(1000);
+            clickNextButton();
+            sleep(4000);
         } else {
             throw new Error("Input password orang tua tidak ditemukan.");
         }
@@ -756,9 +786,30 @@ function startAutomation(config) {
 
 // Klik tombol Next / Berikutnya
 function clickNextButton() {
+    var nextWords = ["Berikutnya", "Next", "Lanjutkan", "Continue", "Ayo!", "Ayo", "Let's go"];
+    
+    // 1. Prioritaskan mencari tombol Button resmi terlebih dahulu
+    for (var w = 0; w < nextWords.length; w++) {
+        var word = nextWords[w];
+        var btn = className("android.widget.Button").text(word).findOne(500) ||
+                  className("android.widget.Button").desc(word).findOne(500) ||
+                  className("android.widget.Button").textContains(word).findOne(500);
+        if (btn) {
+            if (btn.clickable()) {
+                btn.click();
+            } else if (btn.parent() && btn.parent().clickable()) {
+                btn.parent().click();
+            } else {
+                click(btn.bounds().centerX(), btn.bounds().centerY());
+            }
+            return true;
+        }
+    }
+
+    // 2. Jika tidak ada, scroll sedikit lalu cari element apa saja yang cocok
     scrollDownIfNeeded();
     sleep(300);
-    return clickTextOrDescMatch(["Next", "Berikutnya", "Lanjutkan", "Continue", "Ayo!", "Ayo", "Let's go"]);
+    return clickTextOrDescMatch(nextWords);
 }
 
 // Klik element berdasarkan daftar alternatif kata
