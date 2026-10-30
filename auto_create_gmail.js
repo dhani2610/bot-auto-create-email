@@ -395,14 +395,35 @@ function startAutomation(config) {
 
         // Masukkan Password Sementara (Bebas / Dummy dulu)
         setStep("STEP 4.1", "Mengisi sandi sementara (dummy)");
-        if (waitForTextOrDesc(["Password", "Sandi", "Confirm", "Konfirmasi"], 8000)) {
-            var pwInputs = className("android.widget.EditText").find();
+        var pwPageDetected = waitForTextOrDesc(["Buat sandi", "Create a strong password", "sandi yang kuat", "Password", "Sandi", "Confirm", "Konfirmasi"], 10000);
+        
+        var pwInputs = [];
+        for (var wp = 0; wp < 5; wp++) {
+            pwInputs = className("android.widget.EditText").find();
+            // Filter hanya input yang ada di area form (bukan url bar chrome)
+            var formInputs = [];
+            for (var k = 0; k < pwInputs.length; k++) {
+                var pId = pwInputs[k].id() || "";
+                if (pId.indexOf("urlbar") == -1 && pId.indexOf("search") == -1) {
+                    formInputs.push(pwInputs[k]);
+                }
+            }
+            if (formInputs.length > 0) {
+                pwInputs = formInputs;
+                break;
+            }
+            sleep(1000);
+        }
+
+        if (pwInputs.length > 0) {
             for (var i = 0; i < pwInputs.length; i++) {
+                pwInputs[i].click();
+                sleep(400);
                 pwInputs[i].setText(tempPassword);
                 sleep(600);
             }
             clickNextButton();
-            sleep(3500);
+            sleep(4000);
         } else {
             throw new Error("Form input password sementara tidak muncul.");
         }
@@ -581,14 +602,32 @@ function startAutomation(config) {
 
         // Masukkan Password Market Final (sgsg1122 / goldacok / custom)
         setStep("STEP 8.1", "Mengisi Password Akun Market (" + config.finalPw + ")");
-        if (waitForTextOrDesc(["Password", "Sandi", "Confirm", "Konfirmasi"], 8000)) {
-            var finalPwInputs = className("android.widget.EditText").find();
-            for (var j = 0; j < finalPwInputs.length; j++) {
-                finalPwInputs[j].setText(config.finalPw);
+        waitForTextOrDesc(["Buat sandi", "Create a strong password", "sandi yang kuat", "Password", "Sandi", "Confirm", "Konfirmasi"], 10000);
+        
+        var finalFormInputs = [];
+        for (var wpf = 0; wpf < 5; wpf++) {
+            var rawPw = className("android.widget.EditText").find();
+            for (var m = 0; m < rawPw.length; m++) {
+                var rawId = rawPw[m].id() || "";
+                if (rawId.indexOf("urlbar") == -1 && rawId.indexOf("search") == -1) {
+                    finalFormInputs.push(rawPw[m]);
+                }
+            }
+            if (finalFormInputs.length > 0) break;
+            sleep(1000);
+        }
+
+        if (finalFormInputs.length > 0) {
+            for (var j = 0; j < finalFormInputs.length; j++) {
+                finalFormInputs[j].click();
+                sleep(400);
+                finalFormInputs[j].setText(config.finalPw);
                 sleep(600);
             }
             clickNextButton();
-            sleep(3500);
+            sleep(4000);
+        } else {
+            throw new Error("Form Password Market tidak ditemukan di halaman.");
         }
 
         // ======================================================================
