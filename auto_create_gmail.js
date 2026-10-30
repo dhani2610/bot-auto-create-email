@@ -482,7 +482,17 @@ function startAutomation(config) {
                 pwInputs[i].setText(tempPassword);
                 sleep(600);
             }
-            clickNextButton();
+
+            // Pastikan tombol Berikutnya di bawah form terklik dengan tepat
+            sleep(500);
+            var clicked = clickNextButton();
+            if (!clicked) {
+                // Cari tombol Berikutnya langsung berdasarkan teks dan koordinat
+                var btnNextPw = text("Berikutnya").findOne(1000) || text("Next").findOne(1000);
+                if (btnNextPw) {
+                    click(btnNextPw.bounds().centerX(), btnNextPw.bounds().centerY());
+                }
+            }
             sleep(4000);
         } else {
             throw new Error("Form input password sementara tidak muncul.");
