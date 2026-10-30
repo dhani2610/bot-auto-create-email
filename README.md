@@ -21,3 +21,4 @@ python main.py
    - Hasil akun jadi otomatis dikirim ke **Telegram Admin (Andaka)** & **Telegram Client (Idc)**.
 3. **Sistem Debugger & Telemetry Otomatis:**
    - Jika terjadi kendala pada step apa pun, robot otomatis mengirimkan **laporan detail + tangkapan layar (screenshot)** ke Telegram Admin.
+

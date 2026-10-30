@@ -23,3 +23,4 @@ def send_tele(text):
 
 send_tele("🚀 *Bot Termux Berhasil Dijalankan!*\nKoneksi repository dan telegram aktif.")
 print("[OK] Notifikasi startup terkirim ke Telegram.")
+
