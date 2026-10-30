@@ -43,9 +43,39 @@ CONFIG = {
 FIRST_NAMES = ["nadia", "arib", "bintang", "dian", "fajar", "gilang", "haikal", "ihsan", "lutfi", "maulana", "rizki", "kurnia", "satria", "wahyu"]
 LAST_NAMES = ["pratama", "utomo", "cahyo", "bagas", "dimas", "gunawan", "hubner", "kaila", "seika", "zahra", "anisa", "saputra"]
 
-CURRENT_STEP = "Inisialisasi"
+def load_config():
+    """Membaca konfigurasi dari file config.json atau input interaktif jika ingin ganti akun"""
+    config_file = "config.json"
+    cfg = CONFIG.copy()
 
-def log_step(step_name, desc=""):
+    if os.path.exists(config_file):
+        try:
+            with open(config_file, "r") as f:
+                saved = json.load(f)
+                cfg.update(saved)
+        except Exception:
+            pass
+
+    print("\n" + "=" * 50)
+    print("📋 PENGATURAN AKUN ORANG TUA (PARENT)")
+    print(f"Email saat ini: {cfg['PARENT_EMAIL']}")
+    print("=" * 50)
+    
+    tanya = input("Mau ganti email orang tua? (y/N): ").strip().lower()
+    if tanya == 'y':
+        new_email = input("Masukkan Email Ortu Baru: ").strip()
+        new_pass = input("Masukkan Password Ortu Baru: ").strip()
+        if new_email:
+            cfg["PARENT_EMAIL"] = new_email
+        if new_pass:
+            cfg["PARENT_PASSWORD"] = new_pass
+        
+        # Simpan ke config.json agar permanen
+        with open(config_file, "w") as f:
+            json.dump(cfg, f, indent=4)
+        print("✅ Pengaturan akun baru berhasil disimpan!\n")
+
+    return cfg
     global CURRENT_STEP
     CURRENT_STEP = step_name
     print(f"\n>> [{step_name}] {desc}")
@@ -98,24 +128,26 @@ def press_enter():
     time.sleep(2)
 
 def main():
+    cfg = load_config()
+
     print("=" * 60)
     print(">> MEMULAI BOT GMAIL (TERMUX ANDROID)...")
-    print(f"Parent Email    : {CONFIG['PARENT_EMAIL']}")
-    print(f"Market Password : {CONFIG['MARKET_PASSWORD']}")
-    print(f"Tahun Bypass    : {CONFIG['ADULT_YEAR']}")
+    print(f"Parent Email    : {cfg['PARENT_EMAIL']}")
+    print(f"Market Password : {cfg['MARKET_PASSWORD']}")
+    print(f"Tahun Bypass    : {cfg['ADULT_YEAR']}")
     print("=" * 60)
 
     first_name = random.choice(FIRST_NAMES)
     last_name = random.choice(LAST_NAMES)
     digits = str(random.randint(10, 999))
     child_year = "2015"
-    adult_year = CONFIG["ADULT_YEAR"]
+    adult_year = cfg["ADULT_YEAR"]
     day_birth = str(random.randint(1, 28))
     market_uname = (first_name + last_name + digits)[:20]
     final_email = f"{market_uname}@gmail.com"
 
     # Kirim sinyal bot mulai ke Telegram
-    send_telegram(f"🚀 *Bot Termux Dimulai di HP!*\nTarget: `{final_email}`\nParent: `{CONFIG['PARENT_EMAIL']}`")
+    send_telegram(f"🚀 *Bot Termux Dimulai di HP!*\nTarget: `{final_email}`\nParent: `{cfg['PARENT_EMAIL']}`")
 
     try:
         # STEP 1: Buka Google Chrome di HP
@@ -148,15 +180,15 @@ def main():
         time.sleep(4)
 
         # STEP 4: Parent Sign-In
-        log_step("STEP 4", f"Mengisi Email Orang Tua: {CONFIG['PARENT_EMAIL']}...")
-        type_text(CONFIG["PARENT_EMAIL"])
+        log_step("STEP 4", f"Mengisi Email Orang Tua: {cfg['PARENT_EMAIL']}...")
+        type_text(cfg["PARENT_EMAIL"])
         time.sleep(1)
         press_enter()
         time.sleep(5)
 
         # STEP 4.1: Password Orang Tua
         log_step("STEP 4.1", "Mengisi Password Akun Orang Tua...")
-        type_text(CONFIG["PARENT_PASSWORD"])
+        type_text(cfg["PARENT_PASSWORD"])
         time.sleep(1)
         press_enter()
         time.sleep(6)
@@ -182,8 +214,8 @@ def main():
         time.sleep(4)
 
         # STEP 7: Password Market Final
-        log_step("STEP 7", f"Mengisi Password Market: {CONFIG['MARKET_PASSWORD']}...")
-        type_text(CONFIG["MARKET_PASSWORD"])
+        log_step("STEP 7", f"Mengisi Password Market: {cfg['MARKET_PASSWORD']}...")
+        type_text(cfg["MARKET_PASSWORD"])
         time.sleep(1)
         press_enter()
         time.sleep(4)
@@ -194,10 +226,10 @@ def main():
         success_msg = (
             f"✅ *GMAIL MARKET BERHASIL DIBUAT (TERMUX)*\n\n"
             f"📧 *Email:* `{final_email}`\n"
-            f"🔑 *Password:* `{CONFIG['MARKET_PASSWORD']}`\n"
+            f"🔑 *Password:* `{cfg['MARKET_PASSWORD']}`\n"
             f"📅 *Tahun Lahir:* `{adult_year}`\n"
             f"👤 *Nama:* {first_name} {last_name}\n"
-            f"🛡️ *Parent:* `{CONFIG['PARENT_EMAIL']}`\n"
+            f"🛡️ *Parent:* `{cfg['PARENT_EMAIL']}`\n"
             f"📱 *Engine:* Termux Python Native"
         )
         send_telegram(success_msg)
@@ -210,3 +242,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
