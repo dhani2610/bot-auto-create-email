@@ -76,6 +76,10 @@ def load_config():
         print("✅ Pengaturan akun baru berhasil disimpan!\n")
 
     return cfg
+
+CURRENT_STEP = "Inisialisasi"
+
+def log_step(step_name, desc=""):
     global CURRENT_STEP
     CURRENT_STEP = step_name
     print(f"\n>> [{step_name}] {desc}")
