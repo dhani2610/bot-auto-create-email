@@ -271,35 +271,52 @@ function startAutomation(config) {
         // ======================================================================
         setStep("STEP 1", "Membuka halaman register Google...");
         
-        // Buka URL langsung jika belum di halaman form Google
-        if (className("android.widget.EditText").find().length == 0 &&
-            !textContains("Basic info").exists() && !textContains("Informasi dasar").exists()) {
-            
-            app.startActivity({
-                action: "android.intent.action.VIEW",
-                data: "https://accounts.google.com/signup/v2/createaccount?flowName=GlifWebSignIn&flowEntry=SignUp",
-                packageName: config.browserPkg
-            });
-            sleep(4000);
-        }
+        var regUrl = "https://accounts.google.com/signup/v2/createaccount?flowName=GlifWebSignIn&flowEntry=SignUp";
+        
+        // Selalu trigger Intent buka link pendaftaran secara eksplisit
+        app.startActivity({
+            action: "android.intent.action.VIEW",
+            data: regUrl,
+            packageName: config.browserPkg
+        });
+        sleep(4000);
 
-        // Cek jika masih berada di halaman Sign-in dengan tombol "Create account" / "Buat akun"
-        if (className("android.widget.EditText").find().length == 0) {
-            var btnCreate = className("android.widget.Button").textContains("Create account").findOne(1500) ||
-                            className("android.widget.Button").textContains("Buat akun").findOne(1500);
+        // Pastikan halaman form pendaftaran benar-benar termuat
+        var pageLoaded = false;
+        for (var wl = 0; wl < 10; wl++) {
+            // Cek apakah sudah di form nama atau info dasar
+            if (textContains("Buat Akun Google").exists() || textContains("Create a Google Account").exists() ||
+                textContains("Masukkan nama").exists() || textContains("Enter your name").exists() ||
+                textContains("First name").exists() || textContains("Nama depan").exists() ||
+                textContains("Basic info").exists() || textContains("Informasi dasar").exists()) {
+                pageLoaded = true;
+                break;
+            }
+
+            // Jika Chrome malah buka halaman kosong / tab baru Google (ada tombol Buat Akun)
+            var btnCreate = className("android.widget.Button").textContains("Create account").findOne(800) ||
+                            className("android.widget.Button").textContains("Buat akun").findOne(800) ||
+                            text("Create account").findOne(800) || text("Buat akun").findOne(800);
             if (btnCreate) {
                 btnCreate.click();
                 sleep(1500);
-
-                // Pilih opsi "For my child" / "Untuk anak saya" jika muncul popup
                 clickTextOrDescMatch(["For my child", "Untuk anak saya", "child", "anak"]);
                 sleep(2000);
-
-                if (textContains("continue").exists() || textContains("lanjutkan").exists()) {
-                    clickTextOrDescMatch(["Yes, continue", "Ya, lanjutkan", "Lanjutkan", "Continue", "Next", "Berikutnya"]);
-                    sleep(2500);
-                }
+                clickTextOrDescMatch(["Yes, continue", "Ya, lanjutkan", "Lanjutkan", "Continue", "Next", "Berikutnya"]);
+                sleep(3000);
+                pageLoaded = true;
+                break;
             }
+
+            // Jika masih di halaman beranda / search bar Chrome, kirim ulang Intent URL
+            if (wl == 3 || wl == 6) {
+                app.startActivity({
+                    action: "android.intent.action.VIEW",
+                    data: regUrl,
+                    packageName: config.browserPkg
+                });
+            }
+            sleep(1500);
         }
 
         // ======================================================================
@@ -307,33 +324,36 @@ function startAutomation(config) {
         // ======================================================================
         setStep("STEP 2", "Mengisi nama: " + firstName + " " + lastName);
         
-        // Tunggu hingga field EditText nama muncul di layar
-        var nameInputFound = false;
+        // Tunggu hingga field EditText FORM nama (bukan url bar Chrome) muncul
+        var formNameInputs = [];
         for (var wn = 0; wn < 10; wn++) {
-            var edits = className("android.widget.EditText").find();
-            if (edits.length >= 1) {
-                nameInputFound = true;
+            var allEdits = className("android.widget.EditText").find();
+            var validEdits = [];
+            for (var e = 0; e < allEdits.length; e++) {
+                var editId = allEdits[e].id() || "";
+                if (editId.indexOf("urlbar") == -1 && editId.indexOf("search") == -1) {
+                    validEdits.push(allEdits[e]);
+                }
+            }
+            if (validEdits.length >= 1) {
+                formNameInputs = validEdits;
                 break;
             }
             sleep(1000);
         }
 
-        if (nameInputFound) {
-            var edits = className("android.widget.EditText").find();
-            
+        if (formNameInputs.length >= 1) {
             // 1. Isi Nama Depan
-            if (edits.length >= 1) {
-                edits[0].click();
-                sleep(500);
-                edits[0].setText(firstName);
-                sleep(600);
-            }
+            formNameInputs[0].click();
+            sleep(500);
+            formNameInputs[0].setText(firstName);
+            sleep(600);
 
-            // 2. Isi Nama Belakang
-            if (edits.length >= 2) {
-                edits[1].click();
+            // 2. Isi Nama Belakang jika ada
+            if (formNameInputs.length >= 2) {
+                formNameInputs[1].click();
                 sleep(500);
-                edits[1].setText(lastName);
+                formNameInputs[1].setText(lastName);
                 sleep(600);
             }
 
@@ -341,7 +361,7 @@ function startAutomation(config) {
             clickNextButton();
             sleep(3500);
         } else {
-            throw new Error("Kolom input nama (EditText) tidak terdeteksi di browser.");
+            throw new Error("Kolom input nama form pendaftaran tidak ditemukan (terjebak di halaman luar Chrome).");
         }
 
         // Cek jika muncul halaman pengantar anak ("Buat Akun Google untuk anak Anda" -> Klik "Ayo!")
