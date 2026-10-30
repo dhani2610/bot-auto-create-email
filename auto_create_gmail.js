@@ -252,13 +252,13 @@ function startAutomation(config) {
     // Siapkan data random
     var firstName = getRandomName();
     var lastName = getRandomName();
-    var randomDigits = getRandomInt(10, 999).toString(); // Maksimal 3 angka
+    var randomDigits = getRandomInt(100, 999).toString(); // Angka 3 digit unik
     var childYear = "2015"; // Tahun anak di bawah 13 tahun untuk memicu flow Parent Sign-In
     var adultYear = config.isFixed2001 ? "2001" : getRandomInt(2001, 2008).toString();
     var dayBirth = getRandomInt(1, 28).toString();
 
-    // Data akun sementara & akun market final
-    var tempUsername = firstName.toLowerCase() + lastName.toLowerCase() + getRandomInt(100, 999);
+    // Data akun sementara & akun market final (selalu sertakan angka acak agar 100% unik & tidak bentrok)
+    var tempUsername = firstName.toLowerCase() + lastName.toLowerCase() + getRandomInt(1000, 9999);
     var tempPassword = "dummy" + getRandomInt(10000, 99999);
     var marketUsername = (firstName.toLowerCase() + lastName.toLowerCase() + randomDigits).substring(0, 20);
     var finalMarketEmail = marketUsername + "@gmail.com";
@@ -394,7 +394,7 @@ function startAutomation(config) {
         // STEP 4: ISI USERNAME GMAIL SEMENTARA & PASSWORD SEMENTARA (DUMMY)
         // ======================================================================
         setStep("STEP 4", "Mengisi alamat Gmail sementara");
-        if (waitForTextOrDesc(["Choose how", "Pilih bagaimana", "Username", "Nama pengguna", "@gmail.com", "Create an email"], 8000)) {
+        if (waitForTextOrDesc(["Choose how", "Pilih bagaimana", "Username", "Nama pengguna", "@gmail.com", "Create an email", "Cara Anda masuk"], 10000)) {
             var radios = className("android.widget.RadioButton").find();
             if (radios.length > 0) {
                 toastLog("Memilih saran email dari Google...");
@@ -403,12 +403,52 @@ function startAutomation(config) {
                 clickNextButton();
                 sleep(2500);
             } else {
-                var unameField = className("android.widget.EditText").findOne(3000);
+                var unameField = null;
+                var allUnameEdits = className("android.widget.EditText").find();
+                for (var u = 0; u < allUnameEdits.length; u++) {
+                    var uId = allUnameEdits[u].id() || "";
+                    if (uId.indexOf("urlbar") == -1 && uId.indexOf("search") == -1) {
+                        unameField = allUnameEdits[u];
+                        break;
+                    }
+                }
+
                 if (unameField) {
+                    unameField.click();
+                    sleep(400);
                     unameField.setText(tempUsername);
                     sleep(1000);
                     clickNextButton();
                     sleep(3000);
+
+                    // Handle jika username sementara bentrok (muncul peringatan merah 'telah digunakan')
+                    for (var retryU = 0; retryU < 3; retryU++) {
+                        if (textContains("digunakan").exists() || textContains("taken").exists() || textContains("sudah ada").exists()) {
+                            toastLog("Username sementara bentrok. Mencoba saran atau kombinasi baru...");
+                            sleep(1000);
+                            
+                            // 1. Cek apakah Google memberikan saran (tombol suggestion @gmail.com)
+                            var suggBtn = className("android.widget.Button").textContains("@gmail.com").findOne(1000);
+                            if (suggBtn && suggBtn.text().indexOf("Berikutnya") == -1 && suggBtn.text().indexOf("Next") == -1) {
+                                suggBtn.click();
+                                sleep(800);
+                                clickNextButton();
+                                sleep(2500);
+                                break;
+                            } else {
+                                // 2. Buat kombinasi username yang jauh lebih unik (nama + 6 angka acak)
+                                tempUsername = firstName.toLowerCase() + lastName.toLowerCase() + getRandomInt(100000, 999999);
+                                unameField.click();
+                                sleep(300);
+                                unameField.setText(tempUsername);
+                                sleep(800);
+                                clickNextButton();
+                                sleep(3000);
+                            }
+                        } else {
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -597,25 +637,31 @@ function startAutomation(config) {
             sleep(2500);
 
             // Cek jika username sudah dipakai orang lain
-            if (textContains("taken").exists() || textContains("digunakan").exists()) {
-                toastLog("Username bentrok. Memilih saran Google...");
-                sleep(1000);
-                // Klik saran yang muncul di teks Available / Tersedia
-                var suggestionBtn = className("android.widget.Button").textContains("@gmail.com").findOne(1500) || className("android.widget.Button").findOnce(0);
-                if (suggestionBtn && suggestionBtn.text().indexOf("Berikutnya") == -1 && suggestionBtn.text().indexOf("Next") == -1) {
-                    suggestionBtn.click();
+            for (var ut = 0; ut < 3; ut++) {
+                if (textContains("taken").exists() || textContains("digunakan").exists() || textContains("sudah ada").exists()) {
+                    toastLog("Username bentrok. Memilih saran Google atau buat username baru...");
                     sleep(1000);
-                    finalMarketEmail = suggestionBtn.text();
-                    clickNextButton();
-                    sleep(3000);
+                    // 1. Coba klik saran Google jika ada
+                    var suggestionBtn = className("android.widget.Button").textContains("@gmail.com").findOne(1200);
+                    if (suggestionBtn && suggestionBtn.text().indexOf("Berikutnya") == -1 && suggestionBtn.text().indexOf("Next") == -1) {
+                        suggestionBtn.click();
+                        sleep(800);
+                        finalMarketEmail = suggestionBtn.text();
+                        clickNextButton();
+                        sleep(2500);
+                    } else {
+                        // 2. Ketik username alternatif dengan angka acak 4 digit yang pasti lolos
+                        marketUsername = (firstName.toLowerCase() + lastName.toLowerCase() + getRandomInt(1000, 9999)).substring(0, 20);
+                        finalMarketEmail = marketUsername + "@gmail.com";
+                        marketUnameInput.click();
+                        sleep(300);
+                        marketUnameInput.setText(marketUsername);
+                        sleep(800);
+                        clickNextButton();
+                        sleep(2500);
+                    }
                 } else {
-                    // Ketik username alternatif
-                    marketUsername = (firstName.toLowerCase() + lastName.toLowerCase() + getRandomInt(1000, 9999)).substring(0, 20);
-                    finalMarketEmail = marketUsername + "@gmail.com";
-                    marketUnameInput.setText(marketUsername);
-                    sleep(1000);
-                    clickNextButton();
-                    sleep(3000);
+                    break;
                 }
             }
         }
